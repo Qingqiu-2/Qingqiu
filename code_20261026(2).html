@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>便携提词器</title>
+<!-- PWA核心配置 -->
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoi5oqA6LWE5oqA5pyvIiwic2hvcnRfbmFtZSI6IuWKoOitgeWKoOacrSIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMwMDAwMDAiLCJ0aGVtZV9jb2xvciI6IiMwMDAwMDAiLCJpY29ucyI6W3sic3JjIjoiZGF0YTppbWFnZS9zdmcreG1sLCUzQ3N2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIjUlM0UlM0NmaWxsPSIjZmZmIiUzRlfDM3dGV4dCB4PSI5NiIgeT0iMTEwIiBmb250LXNpemU9IjgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7vvI8lM0UlM0MvdGV4dCUzRSUzQy9zdmclM0UiLCJzaXplcyI6IjE5MngxOTIiLCJ0eXBlIjoiaW1hZ2Uvc3ZnK3htbCJ9XX0=">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Ctext x='96' y='110' font-size='80' fill='%23fff' text-anchor='middle'%3E提%3C/text%3E%3C/svg%3E">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100vw;height:100vh;overflow:hidden;background:#000;color:#fff;font-family:system-ui,-apple-system}
+.page{width:100%;height:100%;position:relative;background:#000}
+.back-btn{position:absolute;top:20px;left:20px;width:44px;height:44px;border-radius:50%;background:rgba(30,30,30,0.6);z-index:99;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;backdrop-filter:blur(10px)}
+.teleprompter-wrap{position:absolute;top:0;left:0;right:0;bottom:110px;overflow:hidden;box-sizing:border-box}
+.teleprompter-wrap.landscape{width:100%;height:100%;overflow:hidden}
+.scroll-text{width:100%;height:100%;padding:20px 16px;box-sizing:border-box;white-space:pre-line;word-break:break-word;line-height:1.8}
+.bottom-menu{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);width:min(340px,90%);height:64px;background:rgba(40,40,40,0.8);border-radius:32px;display:flex;align-items:center;justify-content:space-around;z-index:99;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.menu-item{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;cursor:pointer;user-select:none}
+.menu-item.main{background:rgba(255,255,255,0.15);font-size:22px}
+.sub-panel{position:absolute;left:50%;bottom:92px;transform:translateX(-50%);width:min(360px,92%);background:rgba(20,20,20,0.92);border-radius:16px;padding:20px;box-sizing:border-box;z-index:100}
+.sub-header{display:flex;justify-content:flex-end;margin-bottom:16px}
+.close-sub{color:#aaa;font-size:16px;padding:8px;cursor:pointer}
+.sub-row{display:flex;align-items:center;margin-bottom:16px;color:#fff;gap:10px;font-size:14px}
+.sub-row label{width:36px;flex-shrink:0}
+.slider{flex:1;accent-color:#fff;height:4px}
+.btn-group{display:flex;gap:4px}
+.btn-group button{width:28px;height:28px;border-radius:6px;border:none;background:rgba(255,255,255,0.15);color:#fff;font-size:14px;cursor:pointer}
+.color-list{display:flex;gap:8px;flex:1}
+.color-item{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.color-item.active{border-color:#fff}
+input[type="checkbox"]{width:18px;height:18px;accent-color:#fff}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="back-btn" onclick="goEdit()">←</div>
+  <div id="teleWrap" class="teleprompter-wrap">
+    <div id="scrollDom" class="scroll-text">
+      <span id="textDom">这里粘贴你的提词台词，支持多行分段。
+测试文字：
+欢迎使用便携提词器，你可以直接修改这段文字，在二级菜单里调节速度、字号、字体颜色，横屏竖屏自动切换。</span>
+    </div>
+  </div>
+  <div class="bottom-menu">
+    <div class="menu-item" onclick="resetPlay();vibrate()" title="重新播放">↺</div>
+    <div class="menu-item main" onclick="togglePlay();vibrate()"><span id="playIcon">▶</span></div>
+    <div class="menu-item" onclick="toggleLandscape();vibrate()" title="横竖屏切换">⟲</div>
+    <div class="menu-item" onclick="toggleSubMenu();vibrate()" title="设置">⋀</div>
+  </div>
+  <div id="subPanel" class="sub-panel" style="display:none">
+    <div class="sub-header"><div class="close-sub" onclick="toggleSubMenu()">✕</div></div>
+    <div class="sub-row">
+      <label>速度</label>
+      <input type="range" min="1" max="20" id="speedSlider" class="slider">
+      <div class="btn-group">
+        <button onclick="adjustSpeed(-1)">−</button>
+        <button onclick="adjustSpeed(1)">+</button>
+      </div>
+    </div>
+    <div class="sub-row">
+      <label>字号</label>
+      <input type="range" min="16" max="120" id="fontSlider" class="slider">
+      <div class="btn-group">
+        <button onclick="adjustFont(-2)">−</button>
+        <button onclick="adjustFont(2)">+</button>
+      </div>
+    </div>
+    <div class="sub-row">
+      <label>颜色</label>
+      <div class="color-list">
+        <div class="color-item active" style="background:#ffffff" onclick="setFontColor('#ffffff',this)"></div>
+        <div class="color-item" style="background:#ffff00" onclick="setFontColor('#ffff00',this)"></div>
+        <div class="color-item" style="background:#ff6666" onclick="setFontColor('#ff6666',this)"></div>
+        <div class="color-item" style="background:#66ff99" onclick="setFontColor('#66ff99',this)"></div>
+        <div class="color-item" style="background:#66ccff" onclick="setFontColor('#66ccff',this)"></div>
+      </div>
+    </div>
+    <div class="sub-row">
+      <label>镜像</label>
+      <input type="checkbox" id="mirrorCheck">
+    </div>
+  </div>
+</div>
+<script>
+let speedVal = 8;
+let fontSizeVal = 48;
+let fontColor = "#ffffff";
+let isMirror = false;
+let isLandscape = false;
+let showSubMenu = false;
+let isPlaying = false;
+let timer = null;
+let scrollTop = 0;
+const textDom = document.getElementById('textDom');
+const scrollDom = document.getElementById('scrollDom');
+const teleWrap = document.getElementById('teleWrap');
+function updateStyle(){
+  let style = `font-size:${fontSizeVal}px;color:${fontColor};`;
+  let transform = [];
+  if(isMirror) transform.push('scaleX(-1)');
+  if(isLandscape) transform.push('rotate(90deg)');
+  if(transform.length>0) style += `transform:${transform.join(' ')};transform-origin:center;display:inline-block;`;
+  textDom.style.cssText = style;
+  teleWrap.classList.toggle('landscape', isLandscape);
+}
+function vibrate(){ if(navigator.vibrate) navigator.vibrate(30); }
+function goEdit(){ history.back(); }
+function togglePlay(){
+  isPlaying = !isPlaying;
+  document.getElementById('playIcon').innerText = isPlaying ? '⏸' : '▶';
+  if(isPlaying){
+    timer = setInterval(()=>{
+      scrollTop += speedVal * 0.4;
+      scrollDom.scrollTop = scrollTop;
+    },40)
+  }else{ clearInterval(timer) }
+}
+function resetPlay(){
+  isPlaying = false;
+  clearInterval(timer);
+  scrollTop = 0;
+  scrollDom.scrollTop = 0;
+  document.getElementById('playIcon').innerText = '▶';
+}
+function toggleLandscape(){ isLandscape = !isLandscape; updateStyle(); }
+function toggleSubMenu(){
+  showSubMenu = !showSubMenu;
+  document.getElementById('subPanel').style.display = showSubMenu ? 'block' : 'none';
+}
+function adjustSpeed(delta){ speedVal += delta; document.getElementById('speedSlider').value = speedVal; }
+function adjustFont(delta){ fontSizeVal += delta; document.getElementById('fontSlider').value = fontSizeVal; updateStyle(); }
+function setFontColor(c, el){
+  fontColor = c;
+  document.querySelectorAll('.color-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+  updateStyle();
+}
+document.getElementById('speedSlider').value = speedVal;
+document.getElementById('speedSlider').oninput = (e)=>{ speedVal = Number(e.target.value); }
+document.getElementById('fontSlider').value = fontSizeVal;
+document.getElementById('fontSlider').oninput = (e)=>{ fontSizeVal = Number(e.target.value); updateStyle(); }
+document.getElementById('mirrorCheck').onchange = (e)=>{ isMirror = e.target.checked; updateStyle(); }
+if(window.DeviceOrientationEvent){
+  window.addEventListener('deviceorientation', (e)=>{
+    const gamma = e.gamma;
+    if(gamma === null) return;
+    if(Math.abs(gamma) > 55 && !isLandscape){ isLandscape = true; updateStyle(); }
+    else if(Math.abs(gamma) < 30 && isLandscape){ isLandscape = false; updateStyle(); }
+  })
+}
+updateStyle();
+</script>
+</body>
+</html>
